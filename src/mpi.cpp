@@ -18,6 +18,7 @@ int size; // problem size
 
 int my_rank;
 int world_size;
+int max_it;
 
 
 void initialize(float *data) {
@@ -105,7 +106,7 @@ void data2pixels(float *data, GLubyte* pixels, int begin, int end){
     // convert rawdata (large, size^2) to pixels (small, resolution^2) for faster rendering speed
     float factor_data_pixel = (float) size / resolution;
     float factor_temp_color = (float) 255 / fire_temp;
-    for (int x = 0; x < resolution; x++){
+    for (int x = begin; x < end; x++){
         for (int y = 0; y < resolution; y++){
             int idx = x * resolution + y;
             int idx_pixel = idx * 3;
@@ -148,7 +149,7 @@ void slave(){
     
     // TODO: Initialize a storage for local pixels (pls refer to sequential version for initialization of GLubyte)
     #ifdef GUI
-    GLubyte* local_pixels;
+    GLubyte* local_pixels = new GLubyte[resolution * resolution * 3];;
     #endif
 
     bool cont = true;
@@ -156,6 +157,7 @@ void slave(){
     while (cont) {
         // reveive continue or terminal from master
         MPI_Recv(&cont, 1, MPI_CXX_BOOL, 0, 2, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        if (cont == false) break;
         float* to_send;
         // TODO: computation part
         if (count % 2 == 1) {
@@ -185,19 +187,21 @@ void slave(){
             MPI_Send(to_send + my_begin_row_id * size, size, MPI_FLOAT, my_rank - 1, 5, MPI_COMM_WORLD);
             MPI_Recv(to_send + (my_begin_row_id - 1) * size, size, MPI_FLOAT, my_rank - 1, 6, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
         }
-        MPI_Send(to_send + my_begin_row_id * size, (my_end_row_id - my_begin_row_id) * size, MPI_FLOAT, 0, 7, MPI_COMM_WORLD);
+
         #ifdef GUI
+        //Method 1
+        MPI_Send(to_send + my_begin_row_id * size, (my_end_row_id - my_begin_row_id) * size, MPI_FLOAT, 0, 7, MPI_COMM_WORLD);
+
+        //Method 2
         // TODO: conver raw temperature to pixels (much smaller than raw data)
-
+        // int p_begin = resolution * my_rank / (world_size);
+        // int p_end = resolution * (my_rank + 1) / world_size;
+        // data2pixels(to_send, local_pixels, p_begin, p_end);
         // TODO: send pixels to master (you can use MPI_Byte to transfer anything to master, then you won't need to declare MPI Type :-) )
-
+        // MPI_Send(local_pixels + p_begin * resolution * 3, (p_end - p_begin) * resolution * 3, MPI_BYTE, 0, 8, MPI_COMM_WORLD);
         #endif
         count++;
     }
-
-    // #ifdef GUI
-    // data2pixels(local_data, local_pixcels);
-    // #endif
 
     // TODO: Remember to delete[] local_data and local_pixcels.
     #ifdef GUI
@@ -241,6 +245,7 @@ void master() {
         for (int i = 1; i < world_size; i++) {
             MPI_Send(&if_cont, 1, MPI_CXX_BOOL, i, 2, MPI_COMM_WORLD);
         }
+        if (if_cont == false) break;
         // TODO: Computation of my part
         float* to_send;
         if (count % 2 == 1) {
@@ -258,30 +263,37 @@ void master() {
         MPI_Recv(to_send + my_end_row_id * size, size, MPI_FLOAT, my_rank + 1, 3, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
         MPI_Send(to_send + (my_end_row_id - 1) * size, size, MPI_FLOAT, my_rank + 1, 4, MPI_COMM_WORLD);
 
+        std::chrono::high_resolution_clock::time_point t2 = std::chrono::high_resolution_clock::now();
+        double this_time = std::chrono::duration<double>(t2 - t1).count();
+        total_time += this_time;
+        printf("Iteration %d, elapsed time: %.6f\n", count, this_time);
+        if (count == max_it) if_cont = false;
+        count++;
+
+        #ifdef GUI
+        //Method 1
         for (int i = 1; i < world_size; i++) {
             int begin_row = size * i / (world_size);
             int end_row = size * (i + 1) / world_size;
             int num = (end_row - begin_row) * size;
             MPI_Recv(to_send + begin_row * size, num, MPI_FLOAT, i, 7, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
         }
+        data2pixels(to_send, pixels, 0, resolution);
+        //Method 2
+        // int p_begin = resolution * my_rank / (world_size);
+        // int p_end = resolution * (my_rank + 1) / world_size;
+        // data2pixels(to_send, pixels, p_begin, p_end);
+        // for (int i = 1; i < world_size; i++) {
+        //     int begin_row = resolution * i / (world_size);
+        //     int end_row = resolution * (i + 1) / world_size;
+        //     int num = (end_row - begin_row) * resolution * 3;
+        //     MPI_Recv(pixels + begin_row * resolution * 3, num, MPI_BYTE, i, 8, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        // }
 
-        std::chrono::high_resolution_clock::time_point t2 = std::chrono::high_resolution_clock::now();
-        double this_time = std::chrono::duration<double>(t2 - t1).count();
-        total_time += this_time;
-        printf("Iteration %d, elapsed time: %.6f\n", count, this_time);
-        count++;
-
-        #ifdef GUI
-        if (count % 2 == 1) {
-            // TODO: Gather pixels of slave processes
-            data2pixels(data_even, pixels, 0, 0);
-        } else {
-            // TODO: Gather pixels of slave processes
-            data2pixels(data_odd, pixels, 0, 0);
-        }
         plot(pixels);
         #endif
     }
+    printf("Stop after %d iterations, elapsed time: %.6f, average computation time: %.6f\n", count-1, total_time, (double) total_time / (count-1));
 
     delete[] data_odd;
     delete[] data_even;
@@ -293,10 +305,9 @@ void master() {
 }
 
 
-
-
 int main(int argc, char *argv[]) {
     size = atoi(argv[1]);
+    max_it = atoi(argv[2]);
 
 	MPI_Init(&argc, &argv);
     MPI_Comm_rank(MPI_COMM_WORLD, &my_rank);
