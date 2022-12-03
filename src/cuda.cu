@@ -18,13 +18,17 @@
 int block_size = 512; // cuda thread block size
 int size; // problem size
 __device__ int dsize;
+__device__ float fire_temp_d;
+__device__ float wall_temp_d;
+__device__ int fire_size_d;
+__device__ int resolution_d;
 
 
 __global__ void initialize(float *data) {
     // TODO: intialize the temperature distribution (in parallelized way)
     int idx = blockDim.x * blockIdx.x + threadIdx.x;
     if (idx >= dsize * dsize) return;
-    data[idx] = wall_temp;
+    data[idx] = wall_temp_d;
 }
 
 
@@ -36,13 +40,13 @@ __global__ void generate_fire_area(bool *fire_area){
     int j = idx % dsize;
     fire_area[idx] = 0;
 
-    float fire1_r2 = fire_size * fire_size;
+    float fire1_r2 = fire_size_d * fire_size_d;
     int a = i - dsize / 2;
     int b = j - dsize / 2;
     int r2 = 0.5 * a * a + 0.8 * b * b - 0.5 * a * b;
     if (r2 < fire1_r2) fire_area[i * dsize + j] = 1;
 
-    float fire2_r2 = (fire_size / 2) * (fire_size / 2);
+    float fire2_r2 = (fire_size_d / 2) * (fire_size_d / 2);
     a = i - 1 * dsize / 3;
     b = j - 1 * dsize / 3;
     r2 = a * a + b * b;
@@ -69,6 +73,7 @@ __global__ void update(float *data, float *new_data) {
 
 __global__ void maintain_wall(float *data) {
     // TODO: maintain the temperature of the wall (sequential is enough)
+    // data[0] = fire_temp;
 }
 
 
@@ -77,19 +82,19 @@ __global__ void maintain_fire(float *data, bool *fire_area) {
     int idx = blockDim.x * blockIdx.x + threadIdx.x;
     if (idx >= dsize * dsize) return;
     
-    if (fire_area[idx]) data[idx] = fire_temp;
+    if (fire_area[idx]) data[idx] = fire_temp_d;
 }
 
 
 #ifdef GUI
 __global__ void data2pixels(float *data, GLubyte* pixels){
     // TODO: convert rawdata (large, size^2) to pixels (small, resolution^2) for faster rendering speed (in parallelized way)
-    float factor_data_pixel = (float) dsize / resolution;
-    float factor_temp_color = (float) 255 / fire_temp;
     int idx = blockDim.x * blockIdx.x + threadIdx.x;
-    if (idx >= resolution * resolution) return;
-    int x = idx / resolution;
-    int y = idx % resolution;
+    if (idx >= resolution_d * resolution_d) return;
+    float factor_data_pixel = (float) dsize / resolution_d;
+    float factor_temp_color = (float) 255 / fire_temp_d;
+    int x = idx / resolution_d;
+    int y = idx % resolution_d;
 
     int idx_pixel = idx * 3;
     int x_raw = x * factor_data_pixel;
@@ -122,7 +127,6 @@ void master() {
     cudaMalloc(&data_odd, size * size * sizeof(float));
     cudaMalloc(&data_even, size * size * sizeof(float));
     cudaMalloc(&fire_area, size * size * sizeof(bool));
-    cudaMemcpy(&dsize, &size, sizeof(int), cudaMemcpyHostToDevice);
 
     #ifdef GUI
     GLubyte *pixels;
@@ -193,7 +197,22 @@ void master() {
 int main(int argc, char *argv[]){
     
     size = atoi(argv[1]);
+    // float* d;
+    // float* d_host;
+    // cudaMalloc(&d, sizeof(float));
+    // maintain_wall<<<1, 1>>>(d);
+    // cudaMemcpy(&d_host, &d, sizeof(float), cudaMemcpyDeviceToHost);
+    // printf("%f \n", d_host);
 
+    float ft = fire_temp;
+    float wt =  wall_temp;
+    int fs =  fire_size;
+    int rs =  resolution;
+    cudaMemcpy(&dsize, &size, sizeof(int), cudaMemcpyHostToDevice);
+    cudaMemcpy(&fire_temp_d, &ft, sizeof(float), cudaMemcpyHostToDevice);
+    cudaMemcpy(&wall_temp_d, &wt, sizeof(float), cudaMemcpyHostToDevice);
+    cudaMemcpy(&fire_size_d, &fs, sizeof(int), cudaMemcpyHostToDevice);
+    cudaMemcpy(&resolution_d, &rs, sizeof(int), cudaMemcpyHostToDevice);
     #ifdef GUI
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_RGB | GLUT_SINGLE);
