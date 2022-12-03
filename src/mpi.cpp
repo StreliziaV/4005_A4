@@ -112,7 +112,7 @@ void data2pixels(float *data, GLubyte* pixels, int begin, int end){
             int idx_pixel = idx * 3;
             int x_raw = x * factor_data_pixel;
             int y_raw = y * factor_data_pixel;
-            int idx_raw = y_raw * size + x_raw;
+            int idx_raw = x_raw * size + y_raw;
             float temp = data[idx_raw];
             int color =  ((int) temp / 5 * 5) * factor_temp_color;
             pixels[idx_pixel] = color;
@@ -190,15 +190,15 @@ void slave(){
 
         #ifdef GUI
         //Method 1
-        MPI_Send(to_send + my_begin_row_id * size, (my_end_row_id - my_begin_row_id) * size, MPI_FLOAT, 0, 7, MPI_COMM_WORLD);
+        // MPI_Send(to_send + my_begin_row_id * size, (my_end_row_id - my_begin_row_id) * size, MPI_FLOAT, 0, 7, MPI_COMM_WORLD);
 
         //Method 2
         // TODO: conver raw temperature to pixels (much smaller than raw data)
-        // int p_begin = resolution * my_rank / (world_size);
-        // int p_end = resolution * (my_rank + 1) / world_size;
-        // data2pixels(to_send, local_pixels, p_begin, p_end);
+        int p_begin = resolution * my_rank / (world_size);
+        int p_end = resolution * (my_rank + 1) / world_size;
+        data2pixels(to_send, local_pixels, p_begin, p_end);
         // TODO: send pixels to master (you can use MPI_Byte to transfer anything to master, then you won't need to declare MPI Type :-) )
-        // MPI_Send(local_pixels + p_begin * resolution * 3, (p_end - p_begin) * resolution * 3, MPI_BYTE, 0, 8, MPI_COMM_WORLD);
+        MPI_Send(local_pixels + p_begin * resolution * 3, (p_end - p_begin) * resolution * 3, MPI_BYTE, 0, 8, MPI_COMM_WORLD);
         #endif
         count++;
     }
@@ -272,23 +272,23 @@ void master() {
 
         #ifdef GUI
         //Method 1
-        for (int i = 1; i < world_size; i++) {
-            int begin_row = size * i / (world_size);
-            int end_row = size * (i + 1) / world_size;
-            int num = (end_row - begin_row) * size;
-            MPI_Recv(to_send + begin_row * size, num, MPI_FLOAT, i, 7, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-        }
-        data2pixels(to_send, pixels, 0, resolution);
-        //Method 2
-        // int p_begin = resolution * my_rank / (world_size);
-        // int p_end = resolution * (my_rank + 1) / world_size;
-        // data2pixels(to_send, pixels, p_begin, p_end);
         // for (int i = 1; i < world_size; i++) {
-        //     int begin_row = resolution * i / (world_size);
-        //     int end_row = resolution * (i + 1) / world_size;
-        //     int num = (end_row - begin_row) * resolution * 3;
-        //     MPI_Recv(pixels + begin_row * resolution * 3, num, MPI_BYTE, i, 8, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        //     int begin_row = size * i / (world_size);
+        //     int end_row = size * (i + 1) / world_size;
+        //     int num = (end_row - begin_row) * size;
+        //     MPI_Recv(to_send + begin_row * size, num, MPI_FLOAT, i, 7, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
         // }
+        // data2pixels(to_send, pixels, 0, resolution);
+        //Method 2
+        int p_begin = resolution * my_rank / (world_size);
+        int p_end = resolution * (my_rank + 1) / world_size;
+        data2pixels(to_send, pixels, p_begin, p_end);
+        for (int i = 1; i < world_size; i++) {
+            int begin_row = resolution * i / (world_size);
+            int end_row = resolution * (i + 1) / world_size;
+            int num = (end_row - begin_row) * resolution * 3;
+            MPI_Recv(pixels + begin_row * resolution * 3, num, MPI_BYTE, i, 8, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        }
 
         plot(pixels);
         #endif

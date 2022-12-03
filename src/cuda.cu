@@ -17,29 +17,50 @@
 
 int block_size = 512; // cuda thread block size
 int size; // problem size
+__device__ int dsize;
 
 
 __global__ void initialize(float *data) {
     // TODO: intialize the temperature distribution (in parallelized way)
-    // int i = blockDim.x * blockIdx.x + threadIdx.x;
-    // if (i < n) {
-    // }
+    int idx = blockDim.x * blockIdx.x + threadIdx.x;
+    if (idx >= dsize * dsize) return;
+    data[idx] = wall_temp;
 }
 
 
 __global__ void generate_fire_area(bool *fire_area){
     // TODO: generate the fire area (in parallelized way)
-    // int i = blockDim.x * blockIdx.x + threadIdx.x;
-    // if (i < n) {
-    // }
+    int idx = blockDim.x * blockIdx.x + threadIdx.x;
+    if (idx >= dsize * dsize) return;
+    int i = idx / dsize;
+    int j = idx % dsize;
+    fire_area[idx] = 0;
+
+    float fire1_r2 = fire_size * fire_size;
+    int a = i - dsize / 2;
+    int b = j - dsize / 2;
+    int r2 = 0.5 * a * a + 0.8 * b * b - 0.5 * a * b;
+    if (r2 < fire1_r2) fire_area[i * dsize + j] = 1;
+
+    float fire2_r2 = (fire_size / 2) * (fire_size / 2);
+    a = i - 1 * dsize / 3;
+    b = j - 1 * dsize / 3;
+    r2 = a * a + b * b;
+    if (r2 < fire2_r2) fire_area[i * dsize + j] = 1;
 }
 
 
 __global__ void update(float *data, float *new_data) {
     // TODO: update temperature for each point  (in parallelized way)
-    // int i = blockDim.x * blockIdx.x + threadIdx.x;
-    // if (i < n) {
-    // }
+    int idx = blockDim.x * blockIdx.x + threadIdx.x;
+    if (idx >= dsize * dsize) return;
+
+    float up = data[idx - dsize];
+    float down = data[idx + dsize];
+    float left = data[idx - 1];
+    float right = data[idx + 1];
+    float new_val = (up + down + left + right) / 4;
+    new_data[idx] = new_val;
 }
 
 
@@ -50,15 +71,32 @@ __global__ void maintain_wall(float *data) {
 
 __global__ void maintain_fire(float *data, bool *fire_area) {
     // TODO: maintain the temperature of the fire (in parallelized way)
-    // int i = blockDim.x * blockIdx.x + threadIdx.x;
-    // if (i < n) {  
-    // }
+    int idx = blockDim.x * blockIdx.x + threadIdx.x;
+    if (idx >= dsize * dsize) return;
+    
+    if (fire_area[idx]) data[idx] = fire_temp;
 }
 
 
 #ifdef GUI
 __global__ void data2pixels(float *data, GLubyte* pixels){
     // TODO: convert rawdata (large, size^2) to pixels (small, resolution^2) for faster rendering speed (in parallelized way)
+    float factor_data_pixel = (float) dsize / resolution;
+    float factor_temp_color = (float) 255 / fire_temp;
+    int idx = blockDim.x * blockIdx.x + threadIdx.x;
+    if (idx >= resolution * resolution) return;
+    int x = idx / resolution;
+    int y = idx % resolution;
+
+    int idx_pixel = idx * 3;
+    int x_raw = x * factor_data_pixel;
+    int y_raw = y * factor_data_pixel;
+    int idx_raw = x_raw * dsize + y_raw;
+    float temp = data[idx_raw];
+    int color =  ((int) temp / 5 * 5) * factor_temp_color;
+    pixels[idx_pixel] = color;
+    pixels[idx_pixel + 1] = 255 - color;
+    pixels[idx_pixel + 2] = 255 - color;
 }
 
 
@@ -81,6 +119,7 @@ void master() {
     cudaMalloc(&data_odd, size * size * sizeof(float));
     cudaMalloc(&data_even, size * size * sizeof(float));
     cudaMalloc(&fire_area, size * size * sizeof(bool));
+    cudaMemcpy(&dsize, &size, sizeof(int), cudaMemcpyHostToDevice);
 
     #ifdef GUI
     GLubyte *pixels;
@@ -116,8 +155,10 @@ void master() {
         // double this_time = std::chrono::duration<double>(t2 - t1).count();
         // total_time += this_time;
         // printf("Iteration %d, elapsed time: %.6f\n", count, this_time);
+
         count++;
-        
+        if (count >= 1000) break;
+
         #ifdef GUI
         if (count % 2 == 1) {
             data2pixels<<<n_block_resolution, block_size>>>(data_even, pixels);
