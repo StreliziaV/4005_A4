@@ -54,6 +54,9 @@ __global__ void update(float *data, float *new_data) {
     // TODO: update temperature for each point  (in parallelized way)
     int idx = blockDim.x * blockIdx.x + threadIdx.x;
     if (idx >= dsize * dsize) return;
+    int i = idx / dsize;
+    int j = idx % dsize;
+    if (i == 0 || i == dsize - 1 || j == 0 || j == dsize - 1) return;
 
     float up = data[idx - dsize];
     float down = data[idx + dsize];
@@ -133,6 +136,7 @@ void master() {
 
     initialize<<<n_block_size, block_size>>>(data_odd);
     generate_fire_area<<<n_block_size, block_size>>>(fire_area);
+    maintain_fire<<<n_block_size, block_size>>>(data_odd, fire_area);
     
     int count = 1;
     double total_time = 0;
@@ -157,7 +161,7 @@ void master() {
         // printf("Iteration %d, elapsed time: %.6f\n", count, this_time);
 
         count++;
-        if (count >= 1000) break;
+        if (count > 1000) break;
 
         #ifdef GUI
         if (count % 2 == 1) {
@@ -195,14 +199,14 @@ int main(int argc, char *argv[]){
     glutInitDisplayMode(GLUT_RGB | GLUT_SINGLE);
     glutInitWindowPosition(0, 0);
     glutInitWindowSize(resolution, resolution);
-    glutCreateWindow("Heat Distribution Simulation Sequential Implementation");
+    glutCreateWindow("Heat Distribution Simulation CUDA Implementation");
     gluOrtho2D(0, resolution, 0, resolution);
     #endif
 
     master();
 
-    printf("Student ID: 119010001\n"); // replace it with your student id
-    printf("Name: Your Name\n"); // replace it with your name
+    printf("Student ID: 119010369\n"); // replace it with your student id
+    printf("Name: Bodong Yan\n"); // replace it with your name
     printf("Assignment 4: Heat Distribution CUDA Implementation\n");
 
     return 0;
