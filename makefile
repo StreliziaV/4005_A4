@@ -35,5 +35,21 @@ all:
 	make cudag
 	make openmp
 	make openmpg
+	make mpip
+	make mpipg
+a4:
+	make seq
+	make mpi
+	make pthread
+	make cuda
+	make openmp
+	make mpip
+a4_gui:
+	make seqg
+	make mpig
+	make pthreadg
+	make cudag
+	make openmpg
+	make mpipg
 clean:
 	rm -f seq mpi pthread seqg mpig pthreadg cuda cudag openmp openmpg mpip mpipg
