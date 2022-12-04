@@ -23,7 +23,7 @@ void initialize(float *data) {
     // intialize the temperature distribution
     int len = size * size;
     for (int i = 0; i < len; i++) {
-        data[i] = wall_temp;
+        data[i] = ini_temp;
     }
 }
 
@@ -95,9 +95,13 @@ void maintain_wall(float *data) {
 bool check_convergence(float *data, float *new_data) {
     for (int i = 1; i < size - 1; i++) {
         for (int j = 1; j < size - 1; j++) {
-            if (abs(data[i * size + j] - new_data[i * size + j]) > threshold) return true;
+            if (abs(data[i * size + j] - new_data[i * size + j]) > threshold) {
+                printf("continue\n");
+                return true;
+            } 
         }
     }
+    printf("stop\n");
     return false;
 }
 
@@ -112,7 +116,7 @@ void data2pixels(float *data, GLubyte* pixels){
             int idx_pixel = idx * 3;
             int x_raw = x * factor_data_pixel;
             int y_raw = y * factor_data_pixel;
-            int idx_raw = y_raw * size + x_raw;
+            int idx_raw = x_raw * size + y_raw;
             float temp = data[idx_raw];
             int color =  ((int) temp / 5 * 5) * factor_temp_color;
             pixels[idx_pixel] = color;
@@ -146,11 +150,11 @@ void master(){
     
     data_odd = new float[size * size];
     data_even = new float[size * size];
-
     fire_area = new bool[size * size];
 
     generate_fire_area(fire_area);
     initialize(data_odd);
+    maintain_wall(data_odd);
 
     int count = 1;
     double total_time = 0;
@@ -162,15 +166,12 @@ void master(){
         if (count % 2 == 1) {
             update(data_odd, data_even);
             maintain_fire(data_even, fire_area);
-            maintain_wall(data_even);
-            if_cont = check_convergence(data_odd, data_even);
+            // if_cont = check_convergence(data_odd, data_even);
         } else {
             update(data_even, data_odd);
             maintain_fire(data_odd, fire_area);
-            maintain_wall(data_odd);
-            if_cont = check_convergence(data_even, data_odd);
+            // if_cont = check_convergence(data_even, data_odd);
         }
-        if_cont = true;
         std::chrono::high_resolution_clock::time_point t2 = std::chrono::high_resolution_clock::now();
         double this_time = std::chrono::duration<double>(t2 - t1).count();
         total_time += this_time;

@@ -25,7 +25,7 @@ __global__ void initialize(float *data) {
     // TODO: intialize the temperature distribution (in parallelized way)
     int idx = blockDim.x * blockIdx.x + threadIdx.x;
     if (idx >= dsize * dsize) return;
-    data[idx] = wall_temp;
+    data[idx] = ini_temp;
 }
 
 
@@ -70,7 +70,14 @@ __global__ void update(float *data, float *new_data) {
 
 __global__ void maintain_wall(float *data) {
     // TODO: maintain the temperature of the wall (sequential is enough)
-    data[0] = dsize;
+    for (int i = 0; i < size; i++) {
+        data[i] = wall_temp;
+        data[size * (size - 1) + i] = wall_temp;
+    }
+    for (int j = 1; j < size - 1; j++) {
+        data[size * j] = wall_temp;
+        data[size * j + size - 1] = wall_temp;
+    }
 }
 
 
@@ -141,6 +148,7 @@ void master() {
     initialize<<<n_block_size, block_size>>>(data_odd);
     generate_fire_area<<<n_block_size, block_size>>>(fire_area);
     maintain_fire<<<n_block_size, block_size>>>(data_odd, fire_area);
+    maintain_wall<<<1, 1>>>(data_odd);
     
     int count = 1;
     double total_time = 0;

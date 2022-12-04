@@ -48,7 +48,6 @@ a4_gui:
 	make seqg
 	make mpig
 	make pthreadg
-	make cudag
 	make openmpg
 	make mpipg
 clean:

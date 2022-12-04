@@ -19,7 +19,7 @@ void initialize(float *data) {
     // intialize the temperature distribution
     int len = size * size;
     for (int i = 0; i < len; i++) {
-        data[i] = wall_temp;
+        data[i] = ini_temp;
     }
 }
 
@@ -73,6 +73,18 @@ void update(float *data, float *new_data, int idx) {
     new_data[idx] = new_val;
 }
 
+void maintain_wall(float *data) {
+    // TODO: maintain the temperature of the wall
+    for (int i = 0; i < size; i++) {
+        data[i] = wall_temp;
+        data[size * (size - 1) + i] = wall_temp;
+    }
+    for (int j = 1; j < size - 1; j++) {
+        data[size * j] = wall_temp;
+        data[size * j + size - 1] = wall_temp;
+    }
+}
+
 #ifdef GUI
 void data2pixels(float *data, GLubyte* pixels, int idx){
     // TODO: convert rawdata (large, size^2) to pixels (small, resolution^2) for faster rendering speed (in parallelized way)
@@ -119,6 +131,7 @@ void master(){
 
     generate_fire_area(fire_area);
     initialize(data_odd);
+    maintain_wall(data_odd);
 
     int count = 1;
     double total_time = 0;

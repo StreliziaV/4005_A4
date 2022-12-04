@@ -33,7 +33,7 @@ void initialize(float *data) {
     // intialize the temperature distribution
     int len = size * size;
     for (int i = 0; i < len; i++) {
-        data[i] = wall_temp;
+        data[i] = ini_temp;
     }
 }
 
@@ -80,8 +80,16 @@ void maintain_fire(float *data, bool* fire_area, int begin_row, int end_row) {
     }
 }
 
-void maintain_wall(float *data, int begin, int end) {
+void maintain_wall(float *data) {
     // TODO: maintain the temperature of the wall
+    for (int i = 0; i < size; i++) {
+        data[i] = wall_temp;
+        data[size * (size - 1) + i] = wall_temp;
+    }
+    for (int j = 1; j < size - 1; j++) {
+        data[size * j] = wall_temp;
+        data[size * j + size - 1] = wall_temp;
+    }
 }
 
 void update(float *data, float *new_data, int begin_row, int end_row) {
@@ -186,6 +194,7 @@ void master() {
 
     generate_fire_area(fire_area);
     initialize(data_odd);
+    maintain_wall(data_odd);
 
     int count = 1;
     bool if_cont = true;
