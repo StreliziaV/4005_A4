@@ -16,6 +16,7 @@
 
 
 int size; // problem size
+int max_it;
 
 
 void initialize(float *data) {
@@ -176,6 +177,8 @@ void master(){
         printf("Iteration %d, elapsed time: %.6f\n", count, this_time);
         count++;
 
+        if (count > max_it) if_cont = false;
+
         #ifdef GUI
         if (count % 2 == 1) {
             data2pixels(data_even, pixels);
@@ -202,6 +205,7 @@ void master(){
 
 int main(int argc, char* argv[]) {
     size = atoi(argv[1]);
+    max_it = atoi(argv[2]);
 
     #ifdef GUI
     glutInit(&argc, argv);

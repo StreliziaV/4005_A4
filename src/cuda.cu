@@ -17,6 +17,7 @@
 
 int block_size = 512; // cuda thread block size
 int size; // problem size
+int max_it;
 __device__ int dsize = 10;
 
 
@@ -143,8 +144,9 @@ void master() {
     
     int count = 1;
     double total_time = 0;
+    bool if_cont = true;
 
-    while (true){
+    while (if_cont){
         // std::chrono::high_resolution_clock::time_point t1 = std::chrono::high_resolution_clock::now();
 
         // TODO: modify the following lines to fit your need.
@@ -164,7 +166,7 @@ void master() {
         // printf("Iteration %d, elapsed time: %.6f\n", count, this_time);
 
         count++;
-        if (count > 1000) break;
+        if (count > max_it) if_cont = false;
 
         #ifdef GUI
         if (count % 2 == 1) {
@@ -196,6 +198,7 @@ void master() {
 int main(int argc, char *argv[]){
     
     size = atoi(argv[1]);
+    max_it = atoi(argv[2]);
     int* temp_d;
     int* temp_h = &size;
     cudaMalloc(&temp_d, sizeof(int));

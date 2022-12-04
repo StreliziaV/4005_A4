@@ -20,6 +20,10 @@ openmpg:
 	g++ ./src/openmp.cpp -o openmpg -fopenmp -I/usr/include -L/usr/local/lib -L/usr/lib -lglut -lGLU -lGL -lm -O2 -DGUI -std=c++11
 video:
 	g++ ./src/video.cpp -o video -I/usr/include -L/usr/local/lib -L/usr/lib -lglut -lGLU -lGL -lm -DGUI -O2 -std=c++11
+mpip:
+	mpic++ ./src/mpip.cpp -o mpip -fopenmp -std=c++11
+mpipg:
+	mpic++ ./src/mpip.cpp -o mpipg -fopenmp -I/usr/include -L/usr/local/lib -L/usr/lib -lglut -lGLU -lGL -lm -O2 -DGUI -std=c++11
 all:
 	make seq
 	make mpi
@@ -32,4 +36,4 @@ all:
 	make openmp
 	make openmpg
 clean:
-	rm -f seq mpi pthread seqg mpig pthreadg cuda cudag openmp openmpg
+	rm -f seq mpi pthread seqg mpig pthreadg cuda cudag openmp openmpg mpip mpipg
