@@ -7,7 +7,7 @@
 #SBATCH --output openmp.out         ## filename of the output
 
 # cd /nfsmnt/119010369/4005_A4/
-./openmpg 1000 1000 4
+./openmpg 1000 2000 4
 # ./openmp 1000 100 20
 # ./openmp 1000 100 40
 # ./openmp 1000 100 80

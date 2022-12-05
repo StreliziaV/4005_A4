@@ -198,7 +198,7 @@ int main(int argc, char *argv[]) {
     glutInitDisplayMode(GLUT_RGB | GLUT_SINGLE);
     glutInitWindowPosition(0, 0);
     glutInitWindowSize(resolution, resolution);
-    glutCreateWindow("Heat Distribution Simulation Sequential Implementation");
+    glutCreateWindow("Heat Distribution Simulation openmp Implementation");
     gluOrtho2D(0, resolution, 0, resolution);
     #endif
 
@@ -206,7 +206,7 @@ int main(int argc, char *argv[]) {
 
     printf("Student ID: 119010369\n"); // replace it with your student id
     printf("Name: Bodong Yan\n"); // replace it with your name
-    printf("Assignment 4: Heat Distribution Sequential Implementation\n");
+    printf("Assignment 4: Heat Distribution openmp Implementation\n");
 
     return 0;
 }

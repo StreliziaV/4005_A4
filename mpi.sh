@@ -7,6 +7,6 @@
 #SBATCH --output mpi.out         ## filename of the output
 
 # cd /nfsmnt/119010355/CSC4005_2022Fall_Demo/project4_template/
-mpirun -np 4 ./mpig 1000 1000
+mpirun -np 4 ./mpig 1000 2000
 # mpirun -np 20 ./mpi 1000 100
 # mpirun -np 40 ./mpi 1000 100

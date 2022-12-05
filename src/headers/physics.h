@@ -3,4 +3,4 @@
 #define wall_temp 20.0f
 #define ini_temp 0.0f
 #define fire_size 100
-#define resolution 600
+#define resolution 800

@@ -7,7 +7,7 @@
 #SBATCH --output pthread.out         ## filename of the output
 
 # cd /nfsmnt/119010369/4005_A4/
-./pthreadg 1000 10000 4
+./pthreadg 1000 3000 4
 # ./pthread 1000 100 20
 # ./pthread 1000 100 40
 # ./pthread 1000 100 80
